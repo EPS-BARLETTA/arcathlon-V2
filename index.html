@@ -80,11 +80,12 @@
   .banner{background:#fff7ed; border:2px dashed #f59e0b; color:#7c2d12; border-radius:12px; padding:8px 10px; text-align:center; font-weight:800}
   .banner.zone2{background:#ecfeff; border-color:#06b6d4; color:#155e75}
 
-  .runnerBadge{
-    display:flex; align-items:center; justify-content:center;
-    margin:8px auto 0; min-height:56px; padding:10px 18px; max-width:420px;
-    background:var(--green); color:#fff; border-radius:16px; font-weight:900; font-size:22px; text-transform:uppercase;
+  .roleBlock{
+    text-align:center; margin:6px auto 0; max-width:420px;
+    border:2px solid #dbeafe; border-radius:18px; padding:12px 16px; background:#f8fbff;
   }
+  .roleLineBig{ font-size:clamp(22px,4vw,34px); font-weight:800; text-transform:uppercase; color:var(--ink); }
+  .roleLineBig + .roleLineBig{ margin-top:6px; font-size:clamp(20px,3.6vw,30px); color:var(--muted); text-transform:none; }
 
   /* Modal générique */
   .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:80;
@@ -137,18 +138,12 @@
         <div>
           <h3>Coureur 1</h3>
           <label>Prénom</label><input id="p1_prenom" autocomplete="off">
-          <label>Nom</label><input id="p1_nom" autocomplete="off">
           <label>Classe</label><input id="p1_classe" autocomplete="off">
-          <label>Sexe</label>
-          <select id="p1_sexe"><option value="">—</option><option>F</option><option>M</option></select>
         </div>
         <div>
           <h3>Coureur 2</h3>
           <label>Prénom</label><input id="p2_prenom" autocomplete="off">
-          <label>Nom</label><input id="p2_nom" autocomplete="off">
           <label>Classe</label><input id="p2_classe" autocomplete="off">
-          <label>Sexe</label>
-          <select id="p2_sexe"><option value="">—</option><option>F</option><option>M</option></select>
         </div>
       </div>
 
@@ -194,13 +189,12 @@
           <button id="backSetup" class="b-slate btn-lg">⬅ Saisie</button>
           <span class="pill" id="metaRunner">—</span>
         </div>
-        <h2 id="runnerTitle">—</h2>
-
-        <!-- Prénom unique en gros bloc vert -->
-        <div id="runnerBadge" class="runnerBadge">—</div>
-
         <div class="btns" style="margin:6px 0">
           <span class="pill" id="zoneBadge">Zone 1</span>
+        </div>
+        <div class="roleBlock">
+          <div class="roleLineBig">Coureur : <span id="runnerName">—</span></div>
+          <div class="roleLineBig">Observateur : <span id="observerName">—</span></div>
         </div>
 
         <!-- Chrono -->
@@ -241,6 +235,7 @@
             <span class="kchip shot">Tirées : <b id="shotCount">0</b></span>
             <span class="kchip remain" id="remainChip">Restantes : <b id="remain">0</b></span>
             <span class="kchip">Indice : <b id="indiceArc">0</b>%</span>
+            <span class="kchip">Points : <b id="pointsScored">0</b> / <b id="pointsPossible">0</b></span>
           </div>
 
           <div class="advice" id="adviceBox">
@@ -312,7 +307,7 @@
       <div class="modal-head help"><span>ℹ️</span><span>Mode d’emploi — ArcAthlon-V2</span></div>
       <div class="modal-body">
         <ol class="help-list">
-          <li>Saisir pour chaque élève : <strong>Prénom</strong>, <strong>Nom</strong>, <strong>Classe</strong>, <strong>Sexe</strong>.</li>
+          <li>Saisir pour chaque élève : <strong>Prénom</strong> et <strong>Classe</strong>.</li>
           <li>Régler la durée, la longueur d’un tour, et la règle <strong>Tours → Flèches</strong>.</li>
           <li>Avant de démarrer, ouvrir <strong>Paramètres</strong> pour :
             <ul>
@@ -404,8 +399,7 @@
 
         <p class="muted" style="margin-top:6px">Ces réglages s’appliquent à la prochaine session (Course 1), puis restent verrouillés durant la course.</p>
         <div class="btns" style="margin-top:10px">
-          <button id="settingsSave" class="b-green btn-lg">💾 Enregistrer</button>
-          <button class="b-slate btn-lg" data-close>Fermer</button>
+          <button id="settingsSaveClose" class="b-green btn-lg">💾 Enregistrer et fermer</button>
         </div>
       </div>
     </div>
@@ -441,7 +435,8 @@
 const qs = sel => document.querySelector(sel);
 const V = { cover: qs('#view-cover'), setup: qs('#view-setup'), course: qs('#view-course'), summary: qs('#view-summary') };
 function show(name){ Object.values(V).forEach(v=>{ v.classList.add('hidden'); v.setAttribute('hidden',''); });
-  const t=V[name]; if(t){ t.classList.remove('hidden'); t.removeAttribute('hidden'); } closeModals(); window.scrollTo(0,0); }
+  const t=V[name]; if(t){ t.classList.remove('hidden'); t.removeAttribute('hidden'); }
+  closeModals(); window.scrollTo(0,0); }
 function openModal(id){ const m=qs('#'+id); if(!m) return; m.classList.add('show'); m.removeAttribute('hidden'); }
 function closeModals(){ document.querySelectorAll('.modal').forEach(m=>{ m.classList.remove('show'); m.setAttribute('hidden',''); }); }
 function showToast(msg, ms=1600){ const t=qs('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(showToast.t); showToast.t=setTimeout(()=>t.classList.remove('show'),ms); }
@@ -467,7 +462,7 @@ function val(id){ return clean(document.getElementById(id).value); }
 function okNum(v,min){ const n=+v; return Number.isFinite(n) && n>=min; }
 function mark(el, good){ el.style.borderColor = good ? '#e5e7eb' : '#ef4444'; }
 function validate(){
-  const req = ['p1_prenom','p1_nom','p1_classe','p1_sexe','p2_prenom','p2_nom','p2_classe','p2_sexe'];
+  const req = ['p1_prenom','p1_classe','p2_prenom','p2_classe'];
   let ok = true;
   req.forEach(id=>{ const el=document.getElementById(id); const good=val(id).length>0; mark(el,good); ok=ok&&good; });
   ['duree_min','tour_m','tours_bloc','fleches_bloc'].forEach(id=>{
@@ -476,7 +471,7 @@ function validate(){
   });
   qs('#goCourse').disabled = !ok; return ok;
 }
-['p1_prenom','p1_nom','p1_classe','p1_sexe','p2_prenom','p2_nom','p2_classe','p2_sexe','duree_min','tour_m','tours_bloc','fleches_bloc']
+['p1_prenom','p1_classe','p2_prenom','p2_classe','duree_min','tour_m','tours_bloc','fleches_bloc']
 .forEach(id=>{ const el=document.getElementById(id); el.addEventListener('input',validate); el.addEventListener('change',validate); });
 
 /* Presets tours→flèches */
@@ -500,24 +495,35 @@ function applySettingsFromModal(){
   qs('#aid_thrZeros').textContent = settings.thrZeros;
   qs('#aid_thrSum').textContent = settings.thrSum;
 }
-qs('#settingsSave').onclick = ()=>{ if(raceRunning){ showToast('Paramètres verrouillés pendant la course.'); return; } applySettingsFromModal(); showToast('Paramètres enregistrés.'); };
+qs('#settingsSaveClose').onclick = ()=>{ if(raceRunning){ showToast('Paramètres verrouillés pendant la course.'); return; } applySettingsFromModal(); closeModals(); showToast('Paramètres enregistrés.'); };
 
 /* ============ Session & états course ============ */
 const session={
   p1:null, p2:null, tourM:0, dureeMin:0, rules:{tb:3,fb:3},
   active:'p1', laps:0, frac:0, shots:[], results:{p1:null,p2:null},
-  adviceEnabled:true, assistEnabled:false, thrZeros:3, thrSum:20
+  adviceEnabled:true, assistEnabled:false, thrZeros:3, thrSum:20,
+  zoneStats:{ p1:{entries:0,shots:0,points:0}, p2:{entries:0,shots:0,points:0} }
 };
 let raceRunning=false, timeOver=false, running=false, timer=null, t0=0, elapsed=0;
 let phase='runner1';                  // 'runner1' -> 'runner2' -> 'done'
 let zone2ShotsRemaining=0;            // 3 flèches à consommer si Z2 déclenchée
 
+function defaultZoneStats(){ return {entries:0,shots:0,points:0}; }
+function resetZoneStats(which){
+  if(!which) return;
+  session.zoneStats[which] = defaultZoneStats();
+}
+function getZoneStats(which=session.active){
+  if(!which) return defaultZoneStats();
+  if(!session.zoneStats[which]) session.zoneStats[which]=defaultZoneStats();
+  return session.zoneStats[which];
+}
+
 /* ============ Entrée en course ============ */
 qs('#goCourse').onclick=()=>{
-  if(!validate()){ showToast('Complétez tous les champs (dont Sexe).'); return; }
-  function sex(id){ const s=(val(id)||'').toUpperCase(); return s==='M'?'M':'F'; }
-  session.p1={ prenom:val('p1_prenom'), nom:val('p1_nom'), classe:val('p1_classe'), sexe:sex('p1_sexe') };
-  session.p2={ prenom:val('p2_prenom'), nom:val('p2_nom'), classe:val('p2_classe'), sexe:sex('p2_sexe') };
+  if(!validate()){ showToast('Complétez tous les champs.'); return; }
+  session.p1={ prenom:val('p1_prenom'), nom:'', classe:val('p1_classe'), sexe:'' };
+  session.p2={ prenom:val('p2_prenom'), nom:'', classe:val('p2_classe'), sexe:'' };
   session.dureeMin=+val('duree_min'); session.tourM=+val('tour_m');
   session.rules.tb=+document.getElementById('tours_bloc').value;
   session.rules.fb=+document.getElementById('fleches_bloc').value;
@@ -531,12 +537,13 @@ qs('#goCourse').onclick=()=>{
     thrSum: settings.thrSum
   });
 
+  session.zoneStats={ p1:defaultZoneStats(), p2:defaultZoneStats() };
   phase='runner1'; session.active='p1';
   resetAdviceHistory(); zone2ShotsRemaining=0;
   timeOver=false; raceRunning=false; running=false; elapsed=0;
 
   resetRunnerState(true);
-  paintHeader(); paintRunnerBadge();
+  paintHeader();
   if(session.adviceEnabled) setAdvice("Respire calmement. Reste concentré."); else hideAdviceBox();
   show('course');
 };
@@ -560,6 +567,7 @@ function reset(){
   elapsed=0; clockEl.textContent='00:00.0'; qs('#btnReset').disabled=true;
   if(timeOver) return; // si temps fini, on ne rouvre pas
   session.laps=0; session.shots=[]; session.frac=0;
+  resetZoneStats(session.active);
   zone2ShotsRemaining=0; renderAll(); closeModalEnd(); resetAdviceHistory();
   if(session.adviceEnabled) setAdvice("Respire calmement. Reste concentré."); else hideAdviceBox();
   updateZoneVisuals();
@@ -578,16 +586,26 @@ function tick(){
 }
 
 /* ============ UI header ============ */
-const runnerTitle=qs('#runnerTitle'), metaRunner=qs('#metaRunner'), lapMetersEl=qs('#lapMeters'),
-      lapsEl=qs('#laps'), liveDistanceEl=qs('#liveDistance'), zoneBadge=qs('#zoneBadge'), runnerBadge=qs('#runnerBadge');
+const metaRunner=qs('#metaRunner'), lapMetersEl=qs('#lapMeters'),
+      lapsEl=qs('#laps'), liveDistanceEl=qs('#liveDistance'), zoneBadge=qs('#zoneBadge'),
+      runnerNameEl=qs('#runnerName'), observerNameEl=qs('#observerName');
 function paintHeader(){
-  const R=session[session.active];
-  runnerTitle.textContent=`${R.prenom} ${R.nom}`;
-  metaRunner.textContent=`${R.classe} • ${R.sexe}`;
+  const R=session[session.active] || {};
+  const metaParts = [];
+  if(R.classe) metaParts.push(R.classe);
+  if(R.sexe) metaParts.push(R.sexe);
+  metaRunner.textContent = metaParts.join(' • ') || '—';
   lapMetersEl.textContent=session.tourM;
   targetEl.textContent=session.dureeMin;
+  updateRoleLines();
 }
-function paintRunnerBadge(){ const R=session[session.active]; runnerBadge.textContent = (R?.prenom || '—'); }
+function updateRoleLines(){
+  if(!runnerNameEl || !observerNameEl) return;
+  const runner=session[session.active] || {};
+  const observer=session[session.active==='p1'?'p2':'p1'] || {};
+  runnerNameEl.textContent = runner.prenom || '—';
+  observerNameEl.textContent = observer.prenom || '—';
+}
 
 /* ============ Rendu & verrous ============ */
 function renderAll(){ renderLaps(); renderAllowances(); renderShots(); renderSummaryCounters(); }
@@ -607,7 +625,8 @@ function renderLaps(){ lapsEl.textContent=session.laps; liveDistanceEl.textConte
 
 /* ============ Règles Tours → Flèches ============ */
 function calcAllowedShots(){ const {tb,fb}=session.rules; const blocs=Math.floor(session.laps/tb); return blocs*fb; }
-const allowedEl=qs('#allowed'), shotCountEl=qs('#shotCount'), remainEl=qs('#remain'), remainChip=qs('#remainChip');
+const allowedEl=qs('#allowed'), shotCountEl=qs('#shotCount'), remainEl=qs('#remain'), remainChip=qs('#remainChip'),
+      pointsScoredEl=qs('#pointsScored'), pointsPossibleEl=qs('#pointsPossible');
 function renderAllowances(){
   const allowed=calcAllowedShots(); const remain=Math.max(0,allowed-session.shots.length);
   allowedEl.textContent=allowed; shotCountEl.textContent=session.shots.length; remainEl.textContent=remain;
@@ -627,8 +646,9 @@ document.querySelectorAll('#scoreButtons [data-score]').forEach(btn=>{
     }
     const score=+btn.getAttribute('data-score');
     const fb=session.rules.fb;
+    const wasZone2 = zone2ShotsRemaining>0;
 
-    addShot(score);
+    addShot(score, wasZone2);
     if(session.adviceEnabled) setAdviceSmart('shot');
 
     // Consommer Z2 si actif
@@ -643,8 +663,13 @@ document.querySelectorAll('#scoreButtons [data-score]').forEach(btn=>{
     }
   };
 });
-function addShot(score){
-  session.shots.push({n:session.shots.length+1, score});
+function addShot(score, zone2Active=false){
+  session.shots.push({n:session.shots.length+1, score, zone2:zone2Active});
+  if(zone2Active){
+    const zs=getZoneStats();
+    zs.shots++;
+    zs.points+=score;
+  }
   renderShots(); renderAllowances(); renderSummaryCounters();
 }
 function renderShots(){
@@ -654,7 +679,13 @@ function renderShots(){
     tr.innerHTML=`<td>${s.n}</td><td>${s.score}</td><td><button class="b-red btn-lg">Retirer</button></td>`;
     tr.querySelector('button').onclick=()=>{
       if(timeOver || !raceRunning) return showToast('Action indisponible.');
-      session.shots=session.shots.filter(x=>x.n!==s.n).map((x,i)=>({n:i+1,score:x.score}));
+      if(s.zone2){
+        const zs=getZoneStats();
+        zs.shots=Math.max(0,zs.shots-1);
+        zs.points=Math.max(0,zs.points-s.score);
+      }
+      session.shots=session.shots.filter(x=>x.n!==s.n);
+      session.shots.forEach((x,i)=>{ x.n=i+1; });
       renderShots(); renderAllowances(); renderSummaryCounters();
     };
     shotsTable.append(tr);
@@ -666,7 +697,14 @@ function maybeScheduleAssistForNextVolley(){
   const zeros = lastVolley.filter(s=>s.score===0).length;
   const sum   = lastVolley.reduce((a,b)=>a+b.score,0);
   const needAssist = (zeros>=session.thrZeros) || (sum<=session.thrSum);
-  zone2ShotsRemaining = needAssist ? fb : 0; // 3 flèches en Z2 si besoin
+  if(needAssist){
+    if(zone2ShotsRemaining<=0){
+      getZoneStats().entries++;
+    }
+    zone2ShotsRemaining = fb; // 3 flèches en Z2 si besoin
+  }else{
+    zone2ShotsRemaining = 0;
+  }
   updateZoneVisuals();
 }
 function updateZoneVisuals(){
@@ -683,7 +721,10 @@ function sumScores(){ return session.shots.reduce((a,b)=> a + ((b&&b.score)||0),
 function computeIndiceArc(){ const T=session.shots.length; if(!T) return 0; const avg=sumScores()/T; return +(avg*10).toFixed(2); }
 function renderSummaryCounters(){ const c=scoreCounts();
   c0El.textContent=c[0]; c6El.textContent=c[6]; c7El.textContent=c[7]; c8El.textContent=c[8]; c9El.textContent=c[9]; c10El.textContent=c[10];
-  indiceArcEl.textContent=computeIndiceArc(); }
+  indiceArcEl.textContent=computeIndiceArc();
+  pointsScoredEl.textContent=sumScores();
+  pointsPossibleEl.textContent=session.shots.length*10;
+}
 
 /* ============ Conseils + Encouragements + Humour (6e) ============ */
 const adviceBox=qs('#adviceBox'), adviceTxt=qs('#adviceTxt');
@@ -830,19 +871,24 @@ endActionBtn.onclick = ()=>{
 function finalizeRunnerPartial(){
   const R=session[session.active]; const meters=Math.round((session.laps+(session.frac||0))*session.tourM);
   const c=scoreCounts(); const indice=computeIndiceArc();
+  const totalPoints=sumScores(); const maxPoints=session.shots.length*10;
+  const zs = getZoneStats(session.active);
   session.results[session.active]={ prenom:R.prenom, nom:R.nom, classe:R.classe, sexe:R.sexe, distance:meters,
-    nb0:c[0], nb6:c[6], nb7:c[7], nb8:c[8], nb9:c[9], nb10:c[10], indice_arc:indice };
+    nb0:c[0], nb6:c[6], nb7:c[7], nb8:c[8], nb9:c[9], nb10:c[10], indice_arc:indice,
+    points_total:totalPoints, points_max:maxPoints,
+    zone2_entries:zs.entries||0, zone2_shots:zs.shots||0, zone2_points:zs.points||0 };
 }
 
 function prepareNextRunner(which){
   session.active=which;
+  resetZoneStats(which);
   resetAdviceHistory();
   raceRunning=false; timeOver=false; running=false; clearInterval(timer); elapsed=0; clockEl.textContent='00:00.0';
   session.laps=0; session.shots=[]; session.frac=0; zone2ShotsRemaining=0;
   disableRaceInputs(false);
   qs('#btnStartChrono').disabled=false; qs('#btnPause').disabled=true; qs('#btnReset').disabled=true;
   qs('#backSetup').disabled=true;
-  paintHeader(); paintRunnerBadge(); renderAll(); updateZoneVisuals();
+  paintHeader(); renderAll(); updateZoneVisuals();
   if(session.adviceEnabled) setAdvice("Respire calmement. Reste concentré."); else hideAdviceBox();
 }
 
@@ -851,10 +897,13 @@ let summaryData=[];
 let editMode=false;
 
 function buildSummaryFromResults(){ const out=[]; if(session.results.p1) out.push({...session.results.p1}); if(session.results.p2) out.push({...session.results.p2}); summaryData=out; }
-function buildQrData(rows){ return rows.map(d=>({nom:d.nom, prenom:d.prenom, classe:d.classe, sexe:d.sexe,
-  distance:d.distance, nb0:d.nb0, nb6:d.nb6, nb7:d.nb7, nb8:d.nb8, nb9:d.nb9, nb10:d.nb10, indice_arc:d.indice_arc })); }
+function buildQrData(rows){ return rows.map(d=>({
+  prenom:d.prenom, classe:d.classe, distance:d.distance, nb0:d.nb0, nb6:d.nb6, nb7:d.nb7, nb8:d.nb8, nb9:d.nb9, nb10:d.nb10,
+  zone2_entries:d.zone2_entries, zone2_shots:d.zone2_shots, zone2_points:d.zone2_points,
+  indice_arc:d.indice_arc, points_total:d.points_total, points_max:d.points_max
+})); }
 function buildQR(payload){ const box=qs('#qr'); box.innerHTML=''; try{ if(window.QRCode){ new QRCode(box,{ text:payload, width:256, height:256, correctLevel:QRCode.CorrectLevel.M }); } }catch(e){ console.warn('QR non généré',e); } }
-function toCSV(data){ const H=['nom','prenom','classe','sexe','distance','nb0','nb6','nb7','nb8','nb9','nb10','indice_arc'];
+function toCSV(data){ const H=['nom','prenom','classe','sexe','distance','nb0','nb6','nb7','nb8','nb9','nb10','zone2_entries','zone2_shots','zone2_points','indice_arc','points_total','points_max'];
   const esc=v=>{ const s=(v==null?'':String(v)); return /[;\"\n]/.test(s)? `"${s.replace(/\"/g,'""')}"` : s; };
   return [H.join(';'), ...data.map(d=>H.map(h=>esc(d[h])).join(';'))].join('\n'); }
 
@@ -876,10 +925,8 @@ function renderSummary(asEdit=false){
   const rows = summaryData.map((d,i)=>{
     if(!editMode){
       return `<tr data-index="${i}">
-        <td>${d.nom}</td>
         <td>${d.prenom}</td>
         <td>${d.classe}</td>
-        <td>${d.sexe}</td>
         <td>${d.distance}</td>
         <td>${d.nb0}</td>
         <td>${d.nb6}</td>
@@ -887,19 +934,16 @@ function renderSummary(asEdit=false){
         <td>${d.nb8}</td>
         <td>${d.nb9}</td>
         <td>${d.nb10}</td>
+        <td>${d.zone2_entries||0}</td>
+        <td>${d.zone2_shots||0}</td>
+        <td>${d.zone2_points||0}</td>
+        <td>${(d.points_total||0)} / ${(d.points_max||0)}</td>
         <td>${d.indice_arc}</td>
       </tr>`;
     }else{
       return `<tr data-index="${i}">
-        <td><input class="edit-input" data-f="nom" value="${d.nom||''}"></td>
         <td><input class="edit-input" data-f="prenom" value="${d.prenom||''}"></td>
         <td><input class="edit-input" data-f="classe" value="${d.classe||''}"></td>
-        <td>
-          <select class="edit-input" data-f="sexe">
-            <option ${d.sexe==='F'?'selected':''}>F</option>
-            <option ${d.sexe==='M'?'selected':''}>M</option>
-          </select>
-        </td>
         <td><input class="edit-input" data-f="distance" type="number" step="1" value="${d.distance||0}"></td>
         <td><input class="edit-input" data-f="nb0" type="number" step="1" value="${d.nb0||0}"></td>
         <td><input class="edit-input" data-f="nb6" type="number" step="1" value="${d.nb6||0}"></td>
@@ -907,6 +951,10 @@ function renderSummary(asEdit=false){
         <td><input class="edit-input" data-f="nb8" type="number" step="1" value="${d.nb8||0}"></td>
         <td><input class="edit-input" data-f="nb9" type="number" step="1" value="${d.nb9||0}"></td>
         <td><input class="edit-input" data-f="nb10" type="number" step="1" value="${d.nb10||0}"></td>
+        <td>${d.zone2_entries||0}</td>
+        <td>${d.zone2_shots||0}</td>
+        <td>${d.zone2_points||0}</td>
+        <td>${(d.points_total||0)} / ${(d.points_max||0)}</td>
         <td><input class="edit-input" data-f="indice_arc" type="number" step="0.01" value="${d.indice_arc||0}"></td>
       </tr>`;
     }
@@ -918,9 +966,10 @@ function renderSummary(asEdit=false){
       <div style="overflow:auto; margin-top:8px">
         <table>
           <thead><tr>
-            <th>Nom</th><th>Prénom</th><th>Classe</th><th>Sexe</th>
+            <th>Prénom</th><th>Classe</th>
             <th>Distance (m)</th><th>Nb 0</th><th>Nb 6</th><th>Nb 7</th><th>Nb 8</th><th>Nb 9</th><th>Nb 10</th>
-            <th>Indice (%)</th>
+            <th>Z2 (fois)</th><th>Flèches Z2</th><th>Points Z2</th>
+            <th>Points</th><th>Indice (%)</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -966,14 +1015,17 @@ qs('#btnSaveEdits').onclick = ()=>{
     });
     // Recalculer indice si compteurs changés (prioritaire par rapport au champ saisi)
     const T = (+base.nb0)+(+base.nb6)+(+base.nb7)+(+base.nb8)+(+base.nb9)+(+base.nb10);
+    const P = 6*(+base.nb6) + 7*(+base.nb7) + 8*(+base.nb8) + 9*(+base.nb9) + 10*(+base.nb10);
     if(T>0){
-      const P = 6*(+base.nb6) + 7*(+base.nb7) + 8*(+base.nb8) + 9*(+base.nb9) + 10*(+base.nb10);
       base.indice_arc = +(((P/T)/10)*100).toFixed(2);
     }else{
       base.indice_arc = +(+base.indice_arc||0).toFixed(2);
     }
-    // Normaliser sexe
-    base.sexe = (base.sexe||'').toUpperCase()==='M' ? 'M' : 'F';
+    base.points_total = P;
+    base.points_max = T*10;
+    // Normaliser sexe conservé (si renseigné via imports)
+    const normalizedSex = ((base.sexe||'')+'').trim().toUpperCase();
+    base.sexe = (normalizedSex==='M' || normalizedSex==='F') ? normalizedSex : '';
     return base;
   });
   summaryData = next;
@@ -999,6 +1051,7 @@ function resetRunnerState(hard=false){
     qs('#btnStartChrono').disabled=false; qs('#btnPause').disabled=true; qs('#btnReset').disabled=true;
   }
   session.laps=0; session.shots=[]; session.frac=0; zone2ShotsRemaining=0;
+  resetZoneStats(session.active);
   disableRaceInputs(false); closeModalEnd(); resetAdviceHistory();
   if(session.adviceEnabled) setAdvice("Respire calmement. Reste concentré."); else hideAdviceBox();
   updateZoneVisuals(); renderAll();
